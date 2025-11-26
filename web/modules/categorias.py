@@ -13,7 +13,7 @@ from flask import (
     session,
 )
 import pymongo
-import secret
+from .. import secret
 
 client = pymongo.MongoClient(secret.ATLAS_CONNECTION_STRING)
 db = client["achadoseperdidos"].with_options(

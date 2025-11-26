@@ -3,9 +3,9 @@ from bson.objectid import ObjectId
 from datetime import datetime, timezone
 from ..decorators import login_required, session_expired, admin_required
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from upload import salvar_arquivo
+from ..upload import salvar_arquivo
 import pymongo
-import secret
+from .. import secret
 
 client = pymongo.MongoClient(secret.ATLAS_CONNECTION_STRING)
 db = client["achadoseperdidos"].with_options(
