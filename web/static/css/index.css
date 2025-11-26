@@ -1,0 +1,56 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+
+header h1 {
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+.btn {
+    border-radius: 0.75rem;
+}
+
+table {
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+#objetos thead th {
+    text-align: center;
+}
+
+.sortable {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    padding-right: 25px !important;
+}
+
+.sortable::after {
+    content: '■';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+    font-size: 1.2em;
+}
+
+.sortable.asc::after {
+    content: '▲';
+    opacity: 1;
+    color: #fff;
+}
+
+.sortable.desc::after {
+    content: '▼';
+    opacity: 1;
+    color: #fff;
+}

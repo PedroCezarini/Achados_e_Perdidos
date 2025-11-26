@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Achados e Perdidos - Categorias</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
+    <style>
+body {
+    background-color: #f8f9fa;
+}
+.card {
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.list-group-item a {
+    text-decoration: none;
+    color: #0d6efd;
+}
+.list-group-item a:hover {
+    text-decoration: underline;
+}
+.badge:hover {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+    cursor: pointer;
+}
+.badge:hover::after {
+    content: " \00D7";
+}
+    </style>
+    <script>
+window.addEventListener("DOMContentLoaded", () => {
+    document.querySelector("#campo").addEventListener("keydown", (e) => {
+        if (e.code === "Enter" || e.code === "NumpadEnter") {
+            e.preventDefault();
+            tag = e.target.value
+
+            if (tag.length) {
+                const pill = document.createElement("span");
+                pill.classList.add("badge", "text-bg-secondary", "me-2");
+                pill.textContent = tag;
+
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "campos[]";
+                input.value = tag;
+                pill.appendChild(input)
+
+                pill.addEventListener("click", (e) => {
+                    const remover = e.target;
+
+                    if (remover.parentNode) {
+                        remover.parentNode.removeChild(remover);
+                    }
+                });
+
+                document.querySelector("#campos").appendChild(pill);
+                e.target.value = ""
+            }
+        }
+    });
+});
+    </script>
+</head>
+
+<body>
+    <div class="container py-4">
+        <header class="mb-4 pb-3 border-bottom d-flex justify-content-between align-items-center">
+            <h1 class="fs-3 text-primary">Achados e Perdidos - Categorias</h1>
+            <p>{% if sessao.administrador %}<span class="text-warning">{{ sessao.nome }}</span>{% else %}{{ sessao.nome }}{% endif %} - <a href="/logout">deslogar</a></p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div id="flashes">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="row g-5">
+            <!-- Menu Lateral -->
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="/admin/funcionario" class="list-group-item list-group-item-action">Gerenciar Funcionários</a>
+                    <a href="/admin/categoria" class="list-group-item list-group-item-action">Gerenciar Categorias</a>
+                    <a href="/admin/objeto" class="list-group-item list-group-item-action">Gerenciar Objetos</a>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="col-md-9">
+                <!-- Cadastro de categoria -->
+                <h3 class="mb-3">Nova Categoria</h3>
+                <div class="card p-4 mb-5">
+                    <form action="/admin/categoria/add/form" method="post">
+                        <p class="text-danger fw-bold">Campos marcados por * são obrigatorios!</p>
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nome" name="nome" placeholder="Nome completo" required />
+                        </div>
+
+                        <h5 class="mb-3">Adicionar Campos<span class="text-danger">*</span></h5>
+
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="campo" name="campo" placeholder="Campos (enter adiciona novos)" />
+                        </div>
+
+                        <p id="campos" class="h4"></p>
+
+                        <div>
+                            <button type="submit" class="btn btn-primary btn-sm">Cadastrar</button>
+                        </div>
+
+                    </form>
+                </div>
+
+                <hr />
+
+                <h3 class="mb-4">Listagem de Categorias</h3>
+                {% if categorias %}
+                <table class="table table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Campos</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for categoria in categorias %}
+                        <tr>
+                            <td>{{ categoria.nome }}</td>
+                            <td>{{ categoria.get('campos')|join(", ") }}</td>
+                            <td><a class="btn btn-sm btn-outline-primary" href="/admin/categoria/edit/{{ categoria._id }}">Editar</a>{% if sessao.administrador %} <a class="btn btn-sm btn-outline-danger" href="/admin/categoria/delete/{{ categoria._id }}" onclick="return confirm('Tem certeza que deseja apagar esta categoria?')">Deletar</a>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>Nenhuma categoria cadastrada! :(</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

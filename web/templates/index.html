@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Achados e Perdidos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</head>
+
+<body>
+    <div class="container py-4">
+        <!-- Cabeçalho -->
+        <header class="mb-4 pb-3 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="fs-3 text-primary">Achados e Perdidos</h1>
+                <p class="text-muted">Encontre aqui os itens registrados pela equipe responsável.</p>
+            </div>
+            {% if sessao.logado %}
+            <p>{% if sessao.administrador %}<span class="text-warning">{{ sessao.nome }}</span>{% else %}{{ sessao.nome }}{% endif %} - <a href="/logout">deslogar</a></p>
+            {% endif %}
+        </header>
+
+        <!-- Formulário de Pesquisa -->
+        <div class="card p-4 mb-5">
+            <h2 class="fs-5 mb-4">Pesquisar Itens</h2>
+            <form>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Data Encontrado</label>
+                        <input type="date" class="form-control" id="busca_data_encontrado" name="busca_data_encontrado" max="{{ hoje }}" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Categoria</label>
+                        <select class="form-select" id="busca_categoria" name="busca_categoria">
+                            <option value="0">Nenhuma categoria</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria.id }}">{{ categoria.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Identificação</label>
+                        <input type="text" class="form-control" id="busca_identificacao" name="busca_identificacao" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Local Encontrado</label>
+                        <input type="text" class="form-control" id="busca_local_encontrado" name="busca_local_encontrado" />
+                    </div>
+                </div>
+                <div class="row g-3 mt-3">
+                    <div class="col-md-3">
+                        &nbsp;
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-primary w-100" id="pesquisar">Pesquisar</button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="limpar">Limpar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabela de Resultados -->
+        <div class="table-responsive">
+            <table id="objetos" class="table table-striped table-hover rounded">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Data</th>
+                        <th>Categoria</th>
+                        <th>Identificação</th>
+                        <th>Local Encontrado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for objeto in objetos_perdidos %}
+                    <tr>
+                        <td>{{ objeto.data_encontrado|format_datetime }}</td>
+                        <td>{{ objeto.categoria_nome }}</td>
+                        <td>{{ objeto.identificacao }}</td>
+                        <td>{{ objeto.local_encontrado }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

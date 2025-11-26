@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Achados e Perdidos - Funcionários</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
+    <style>
+body {
+    background-color: #f8f9fa;
+}
+.card {
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.list-group-item a {
+    text-decoration: none;
+    color: #0d6efd;
+}
+.list-group-item a:hover {
+    text-decoration: underline;
+}
+    </style>
+    <script>
+function maskCEP(value) {
+    if (!value) return "";
+    value = value.replace(/\D/g, "");
+    value = value.replace(/^(\d{5})(\d)/, "$1-$2");
+    return value;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelector("form").addEventListener("submit", (e) => {
+        if (document.querySelector('#senha').value !== document.querySelector('#senhaConfirmar').value) {
+            const erroSenha = document.querySelector('#erroSenha');
+            erroSenha.classList.remove("d-none");
+            document.querySelector('#senha').value = ''
+            document.querySelector('#senhaConfirmar').value = ''
+            document.querySelector('#senhaConfirmar').focus
+        }
+    })
+});
+    </script>
+</head>
+
+<body>
+    <div class="container py-4">
+        <header class="mb-4 pb-3 border-bottom d-flex justify-content-between align-items-center">
+            <h1 class="fs-3 text-primary">Achados e Perdidos - Funcionários</h1>
+            <p>{% if sessao.administrador %}<span class="text-warning">{{ sessao.nome }}</span>{% else %}{{ sessao.nome }}{% endif %} - <a href="/logout">deslogar</a></p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div id="flashes">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="row g-5">
+            <!-- Menu Lateral -->
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="/admin/funcionario" class="list-group-item list-group-item-action">Gerenciar Funcionários</a>
+                    <a href="/admin/categoria" class="list-group-item list-group-item-action">Gerenciar Categorias</a>
+                    <a href="/admin/objeto" class="list-group-item list-group-item-action">Gerenciar Objetos</a>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="col-md-9">
+                <!-- Cadastro de Funcionário -->
+                <h3 class="mb-3">Novo Funcionário</h3>
+                <div class="card p-4 mb-5">
+                    {% if sessao.administrador %}
+                    <form action="/admin/funcionario/add" method="post">
+                        <p class="text-danger fw-bold">Campos marcados por * são obrigatorios!</p>
+
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nome" name="nome" placeholder="Nome completo" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="matricula" class="form-label">Matrícula<span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="matricula" name="matricula" placeholder="Número de matrícula" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="senha" class="form-label">Senha<span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="senha" name="senha" placeholder="Digite uma senha" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="senha" class="form-label">Confime a senha<span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="senhaConfirmar" name="senhaConfirmar" placeholder="Confirme a senha" required />
+                        </div>
+
+                        <p id="erroSenha" class="d-none text-danger">Senha e confirmação de senha não coicidem!</p>
+
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" id="administrador" name="administrador" />
+                            <label class="form-check-label" for="administrador">Administrador</label>
+                        </div>
+
+                        <h5 class="mb-3">Endereço</h5>
+                        <div class="mb-3">
+                            <label for="rua" class="form-label">Rua</label>
+                            <input type="text" class="form-control" id="rua" name="rua" placeholder="Rua, Avenida, etc." />
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="cep" class="form-label">CEP</label>
+                            <input type="text" class="form-control" id="cep" name="cep" placeholder="00000-000" onkeyup="this.value = maskCEP(this.value)" maxlength="9" />
+                        </div>
+
+                        <div>
+                            <button type="submit" class="btn btn-primary btn-sm">Cadastrar</button>
+                        </div>
+
+                    </form>
+                    {% else %}
+                    <p class="centered">Somente para administradores</p>
+                    {% endif %}
+                </div>
+
+                <hr />
+
+                <h3 class="mb-4">Listagem de Funcionários</h3>
+                {% if ligados %}
+                <table class="table table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Matricula</th>
+                            <th>Ligado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for funcionario in ligados %}
+                        <tr>
+                            <td>{{ funcionario.nome }}</td>
+                            <td>{{ funcionario.matricula }}</td>
+                            <td>{{ funcionario.ligado|format_datetime }}</td>
+                            <td>{% if (sessao.administrador or sessao.id == funcionario.id) and funcionario.id != "682e4ad7c6002bc2c0163de8" %}<a class="btn btn-sm btn-outline-primary" href="/admin/funcionario/edit/{{ funcionario.id }}">Editar</a>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>Nenhum funcionário cadastrado! :(</p>
+                {% endif %}
+                {% if sessao.administrador %}
+
+                <hr />
+
+                <h3 class="mb-4">Listagem de Funcionários Desligados</h3>
+                {% if desligados %}
+                <table class="table table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Matricula</th>
+                            <th>Ligado</th>
+                            <th>Desligado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for funcionario in desligados %}
+                        <tr>
+                            <td>{{ funcionario.nome }}</td>
+                            <td>{{ funcionario.matricula }}</td>
+                            <td>{{ funcionario.ligado|format_datetime }}</td>
+                            <td>{{ funcionario.desligado|format_datetime }}</td>
+                            <td>{% if sessao.administrador or sessao.id == funcionario.id %}<a class="btn btn-sm btn-outline-primary" href="/admin/funcionario/edit/{{ funcionario.id }}">Editar</a>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>Nenhum funcionário desligado! :(</p>
+                {% endif %}
+            {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

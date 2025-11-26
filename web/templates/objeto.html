@@ -1,0 +1,449 @@
+{% set estados = ["perdido", "doado", "entregue"] %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Achados e Perdidos - Objetos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
+    <style>
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.list-group-item a {
+    text-decoration: none;
+    color: #0d6efd;
+}
+
+.list-group-item a:hover {
+    text-decoration: underline;
+}
+    </style>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const categoria = document.querySelector('#categoria');
+
+    categoria.addEventListener('change', function () {
+        const categoriaId = this.value
+
+        if (categoria.length) {
+            fetch(`_get_campos/${categoriaId}`, {mode: 'cors'})
+                .then(response => response.json())
+                .then(data => {
+                    const campos = document.querySelector('#campos');
+                    campos.innerHTML = '';
+                    let row = null;
+
+                    for (i = 0; i < data.campos.length; i++) {
+                        item = data.campos[i]
+
+                        if (i === 0) {
+                            row = document.createElement('div')
+                            row.classList.add('row');
+                        } else if (i % 3 === 0) {
+                            campos.appendChild(row);
+                            row = document.createElement('div');
+                            row.classList.add('row');
+                        }
+
+                        const col = document.createElement('div');
+                        col.classList.add('col-md-4', 'mb-3');
+
+                        const label = document.createElement('label');
+                        label.setAttribute('for', item);
+                        label.classList.add('form-label');
+                        label.textContent = item;
+                        col.appendChild(label)
+
+                        const input = document.createElement('input');
+                        input.setAttribute('type', 'text');
+                        input.classList.add('form-control');
+                        input.setAttribute('id', item.toLowerCase());
+                        input.setAttribute('name', `campos[${item.toLowerCase()}]`);
+                        col.appendChild(input)
+
+                        row.appendChild(col);
+                    }
+
+                    campos.appendChild(row);
+                });
+        }
+    })
+
+    document.querySelector("#pesquisar").addEventListener("click", pesquisar)
+
+    document.querySelector("#limpar").addEventListener("click", () => {
+        document.querySelector('#busca_data_encontrado').value = '';
+        document.querySelector('#busca_categoria').value = 0;
+        document.querySelector('#busca_identificacao').value = '';
+        document.querySelector('#busca_local_encontrado').value = '';
+        document.querySelector('#busca_status').value = 0;
+        pesquisar()
+    })
+
+    ordernaColunas()
+});
+
+function pesquisar() {
+    const data = document.querySelector('#busca_data_encontrado').value;
+    const categoria = document.querySelector('#busca_categoria').value;
+    const identificacao = document.querySelector('#busca_identificacao').value;
+    const local = document.querySelector('#busca_local_encontrado').value;
+    const status = document.querySelector('#busca_status').value;
+
+    const queryParams = new URLSearchParams();
+    if (data) queryParams.append('data_encontrado', data);
+    if (categoria) queryParams.append('categoria_id', categoria);
+    if (identificacao) queryParams.append('identificacao', identificacao);
+    if (local) queryParams.append('local_encontrado', local);
+    if (status) queryParams.append('status', status);
+
+    fetch(`busca?${queryParams.toString()}`, {mode: 'cors'})
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status} - ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(objetos => {
+            atualizarTabela(objetos);
+        })
+        .catch(error => {
+            console.error('Erro ao buscar objetos:', error);
+            alert('Ocorreu um erro ao realizar a busca. Tente novamente mais tarde.');
+        });
+}
+
+function atualizarTabela(objetos) {
+    const tbody = document.querySelector("#objetos tbody");
+    tbody.innerHTML = "";
+
+    if (objetos.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td class="text-center" colspan="6">Nenhum objeto encontrado com os filtros aplicados.</td>';
+        tbody.appendChild(row);
+        return;
+    }
+
+    objetos.forEach(objeto => {
+        const row = document.createElement('tr');
+
+        let col = document.createElement('td');
+        col.textContent = formata_data(objeto.data_encontrado);
+        row.appendChild(col)
+
+        col = document.createElement('td');
+        col.textContent = objeto.categoria_nome || '';
+        row.appendChild(col)
+
+        col = document.createElement('td');
+        col.textContent = objeto.identificacao || '';
+        row.appendChild(col)
+
+        col = document.createElement('td');
+        col.textContent = objeto.local_encontrado || '';
+        row.appendChild(col);
+
+        col = document.createElement('td');
+        col.textContent = objeto.status.capitalize() || '';
+        row.appendChild(col)
+
+        col = document.createElement('td');
+        let a = document.createElement('a');
+        a.classList.add('btn', 'btn-sm', 'btn-outline-primary');
+        a.setAttribute('href', `/admin/objeto/edit/${ objeto._id }`);
+        a.text = 'Editar';
+        col.appendChild(a)
+        row.append(col)
+
+        tbody.appendChild(row);
+    });
+}
+
+function formata_data(value) {
+    return value ? value.split('-').reverse().join('/') : ''
+}
+
+Object.defineProperty(String.prototype, 'capitalize', {
+    value: function() {
+        return this.charAt(0).toUpperCase() + this.slice(1);
+    },
+    enumerable: false
+});
+
+function ordernaColunas() {
+    const tabela = document.querySelector(`#objetos`);
+
+    const thead = tabela.querySelector("thead"); // Seleciona o thead
+    const headers = thead.querySelectorAll("th"); // Ainda precisamos deles para o texto e índice
+    const tbody = tabela.querySelector("tbody");
+
+    let currentColumn = null;
+    let isAscending = true;
+
+    // Adiciona o listener APENAS ao thead (elemento pai)
+    thead.addEventListener('click', (event) => {
+        const clickedHeader = event.target.closest('th'); // Encontra o TH mais próximo do elemento clicado
+        if (!clickedHeader) return; // Se o clique não foi em um TH, ignora
+
+        const columnIndex = Array.from(headers).indexOf(clickedHeader); // Encontra o índice do TH clicado
+        if (columnIndex === -1) return; // Se não encontrou o índice, ignora
+
+        if (currentColumn === columnIndex) {
+            isAscending = !isAscending;
+        } else {
+            currentColumn = columnIndex;
+            isAscending = true;
+        }
+
+        sortTable(columnIndex, isAscending);
+        updateHeaderIndicators(columnIndex, isAscending);
+    });
+
+    headers.forEach((header) => {
+        header.classList.add('sortable');
+        header.style.cursor = 'pointer';
+    });
+
+    function sortTable(columnIndex, ascending) {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const isDateColumn = headers[columnIndex].textContent.trim() === 'Data Encontrado';
+
+        rows.sort((a, b) => {
+            const aVal = a.children[columnIndex].textContent.trim();
+            const bVal = b.children[columnIndex].textContent.trim();
+
+            if (isDateColumn) {
+                return compareDates(aVal, bVal, ascending);
+            }
+            return compareStrings(aVal, bVal, ascending);
+        });
+
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    function compareDates(a, b, ascending) {
+        const dateA = parseDate(a);
+        const dateB = parseDate(b);
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+            return 0;
+        }
+        return ascending ? dateA - dateB : dateB - dateA;
+    }
+
+    function parseDate(dateString) {
+        if (!dateString) return new Date(0);
+        const [day, month, year] = dateString.split('/');
+        if (isNaN(day) || isNaN(month) || isNaN(year)) {
+             return new Date(NaN);
+        }
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    function compareStrings(a, b, ascending) {
+        const comparison = a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
+        return ascending ? comparison : -comparison;
+    }
+
+    function updateHeaderIndicators(activeColumn, ascending) {
+        headers.forEach((header, index) => {
+            header.classList.remove('asc', 'desc');
+
+            if (index === activeColumn) {
+                header.classList.add(ascending ? 'asc' : 'desc');
+            }
+        });
+    }
+}
+    </script>
+</head>
+
+<body>
+    <div class="container py-4">
+        <header class="mb-4 pb-3 border-bottom d-flex justify-content-between align-items-center">
+            <h1 class="fs-3 text-primary">Achados e Perdidos - Objetos</h1>
+            <p>{% if sessao.administrador %}<span class="text-warning">{{ sessao.nome }}</span>{% else %}{{ sessao.nome }}{% endif %} - <a href="/logout">deslogar</a></p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div id="flashes">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="row g-5">
+            <!-- Menu Lateral -->
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="/admin/funcionario" class="list-group-item list-group-item-action">Gerenciar Funcionários</a>
+                    <a href="/admin/categoria" class="list-group-item list-group-item-action">Gerenciar Categorias</a>
+                    <a href="/admin/objeto" class="list-group-item list-group-item-action">Gerenciar Objetos</a>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="col-md-9">
+                <h3 class="mb-3">Novo Objeto</h3>
+                <div class="card p-4 mb-5">
+                    <form action="/admin/objeto/add" method="post" enctype="multipart/form-data">
+                        <p class="text-danger fw-bold">Campos marcados por * são obrigatorios!</p>
+                        <h5 class="mb-3">Descrição</h5>
+                        <div class="mb-3">
+                            <label for="descricao" class="form-label">Descrição do Objeto<span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="descricao" name="descricao" rows="3" placeholder="Ex: Celular preto encontrado próximo ao pátio..." required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="imagem" class="form-label">Upload de Imagem</label>
+                            <input type="file" class="form-control" id="imagem" name="imagem" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="identificacao" class="form-label">Identificação</label>
+                            <input type="text" class="form-control" id="identificacao" name="identificacao" placeholder="Ex: Cartão com nome “Luiza Souza”">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="data_encontrado" class="form-label">Data Encontrado<span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="data_encontrado" name="data_encontrado" max="{{ hoje }}" required />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="local_encontrado" class="form-label">Local Encontrado<span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="local_encontrado" name="local_encontrado" placeholder="Ex: Bloco B, corredor 2" required />
+                            </div>
+                        </div>
+
+                        <h5 class="mb-3 mt-4">Categoria<span class="text-danger">*</span></h5>
+
+                        <div class="mb-3">
+                            <select class="form-select" id="categoria" name="categoria">
+                                <option value="" disabled selected>Selecione uma categoria</option>
+                                {% if categorias %}
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria._id }}">{{ categoria.nome }}</option>
+                                {% endfor %}
+                                {% else %}
+                                <option value="" disabled>Nenhuma categoria cadastrada</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="campos"></div>
+                        <div>
+                            <button type="submit" class="btn btn-primary btn-sm">Cadastrar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="row g-5">
+                    <!-- Tabela -->
+                    <h3 class="mb-">Listagem de Objetos</h3>
+
+                    <div>
+                        <form class="card p-4 mb-5">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="form-label">Data Encontrado</label>
+                                    <input type="date" class="form-control" id="busca_data_encontrado" name="data_encontrado"  max="{{ hoje }}" />
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="form-label">Categoria</label>
+                                    <select class="form-select" id="busca_categoria" name="categoria">
+                                        <option value="0">Nenhuma</option>
+                                        {% for categoria in categorias %}
+                                        <option value="{{ categoria._id }}">{{ categoria.nome }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Identificação</label>
+                                    <input type="text" class="form-control" id="busca_identificacao" name="identificacao" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Local Encontrado</label>
+                                    <input type="text" class="form-control" id="busca_local_encontrado" name="local_encontrado" />
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" id="busca_status" name="Status">
+                                        <option value="0">Nenhum</option>
+                                        {% for estado in estados %}
+                                        <option value="{{ estado }}">{{ estado.capitalize() }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row g-3 mt-3">
+                                <div class="col-md-3">
+                                    &nbsp;
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-primary w-100" id="pesquisar">Pesquisar</button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="reset" class="btn btn-outline-secondary w-100" id="limpar">Limpar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    {% if objetos %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle" id="objetos">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Categoria</th>
+                                    <th>Identificação</th>
+                                    <th>Local Encontrado</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for objeto in objetos %}
+                                <tr>
+                                    <td>{{ objeto.data_encontrado }}</td>
+                                    <td>{{ objeto.categoria.nome }}</td>
+                                    <td>{{ objeto.identificacao }}</td>
+                                    <td>{{ objeto.local_encontrado }}</td>
+                                    <td>{{ objeto.status|capitalize }}</td>
+                                    <td><a class="btn btn-sm btn-outline-primary" href="/admin/objeto/edit/{{ objeto._id }}">Editar</a>{% if sessao.administrador %} <a class="btn btn-sm btn-outline-danger" href="/admin/objeto/{{ objeto._id }}/delete">Deletar</a>{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p>Nenhum objeto cadastrado! :(</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
