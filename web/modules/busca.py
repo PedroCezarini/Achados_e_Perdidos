@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from bson.objectid import ObjectId
 from datetime import datetime, timezone
-from decorators import login_required, session_expired
+from ..decorators import login_required, session_expired
 import pymongo
 import secret
 

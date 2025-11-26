@@ -1,7 +1,7 @@
 from bson.codec_options import CodecOptions
 from bson.objectid import ObjectId
 from datetime import datetime, timezone
-from decorators import login_required, session_expired, admin_required
+from ..decorators import login_required, session_expired, admin_required
 from flask import (
     Blueprint,
     render_template,
