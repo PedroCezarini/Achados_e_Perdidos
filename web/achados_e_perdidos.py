@@ -1,17 +1,18 @@
 from flask import Flask, render_template, session
-
-from decorators import login_required, session_expired
+from .decorators import login_required, session_expired
 from zoneinfo import ZoneInfo
 from datetime import datetime
-
-from modules.funcionarios import funcionario
-from modules.categorias import categoria, get_categorias
-from modules.objetos import objeto, get_objetos_perdidos
-from modules.logon import logon
-from modules.busca import busca
+from .modules.funcionarios import funcionario
+from .modules.categorias import categoria, get_categorias
+from .modules.objetos import objeto, get_objetos_perdidos
+from .modules.logon import logon
+from .modules.busca import busca
+import os
+import secrets
 
 app = Flask(__name__)
-app.secret_key = "-\x06\xb3\xbd\x15/\xc3\xef~\xd8]\xb3\xef\xd8\xa3\xe5\xa5Sn\xf3SNx\xa9"
+# pegar SECRET_KEY do ambiente (Render) ou gerar temporariamente em dev
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(16)
 
 app.register_blueprint(categoria)
 app.register_blueprint(objeto)

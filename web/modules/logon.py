@@ -123,7 +123,8 @@ def logon_action():
     else:
         # se stored for bytes ou outro tipo, normalize e compare
         try:
-            stored_str = stored.decode("utf-8") if isinstance(stored, (bytes, bytearray)) else str(stored)
+            stored_str = stored.decode("utf-8"
+            ) if isinstance(stored, (bytes, bytearray)) else str(stored)
             password_ok = (stored_str == senha_sha)
         except Exception:
             password_ok = False
