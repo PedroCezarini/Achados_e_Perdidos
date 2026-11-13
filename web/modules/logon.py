@@ -1,72 +1,21 @@
 from flask import Blueprint, request, session, flash, redirect, url_for, current_app
 from hashlib import sha256
 from time import time as time_now
-import os
 
-# optional: werkzeug check_password_hash for compatibility with stronger hashes
+# Verificação opcional de hashes mais fortes (Werkzeug), para facilitar uma futura migração
 try:
     from werkzeug.security import check_password_hash
 except Exception:
-    check_password_hash = None  # fallback handled below
+    check_password_hash = None
 
 logon = Blueprint("logon", __name__)
 
-# cache the client for the process lifetime to avoid recreating it every request
-_client_cache = None
 
 def _get_funcionarios_collection():
-    """
-    Retorna a collection correta de funcionários de forma tolerante:
-    - tenta importar `db` do módulo principal (achados_e_perdidos)
-    - tenta ler current_app.config (ATLAS_CONNECTION_STRING / MONGO_URI)
-    - tenta usar variável de ambiente ATLAS_CONNECTION_STRING / MONGO_URI
-    - prefere 'funcionarios' (lowercase) se a coleção existir, caso contrário usa 'Funcionarios'
-    - usa _client_cache para não recriar clientes em cada requisição
-    """
-    global _client_cache
+    """Usa a mesma conexão com o banco que as demais telas (módulo funcionarios)."""
+    from .funcionarios import funcionarios_collections
 
-    # 1) tentar pegar db exportado pelo módulo principal (se existir)
-    try:
-        from achados_e_perdidos import db
-        coll_names = db.list_collection_names()
-        if "funcionarios" in coll_names:
-            return db["funcionarios"]
-        if "Funcionarios" in coll_names:
-            return db["Funcionarios"]
-        # default: return lowercase name (will create on first insert if needed)
-        return db["funcionarios"]
-    except Exception:
-        # não conseguimos importar o db do módulo principal — prosseguir com fallback
-        pass
-
-    # 2) tentar pegar URI do current_app.config (quando disponível)
-    uri = None
-    try:
-        uri = current_app.config.get("ATLAS_CONNECTION_STRING") or current_app.config.get("MONGO_URI")
-    except RuntimeError:
-        # current_app não disponível fora do contexto, mas aqui chamamos dentro da rota normalmente
-        uri = None
-
-    # 3) fallback para variável de ambiente
-    if not uri:
-        uri = os.environ.get("ATLAS_CONNECTION_STRING") or os.environ.get("MONGO_URI")
-
-    if not uri:
-        raise RuntimeError("ATLAS_CONNECTION_STRING não está definida e 'db' não pôde ser importado.")
-
-    # reutilizar cliente para reduzir overhead
-    if _client_cache is None:
-        from pymongo import MongoClient
-        _client_cache = MongoClient(uri, serverSelectionTimeoutMS=5000)
-
-    db_name = "achadoseperdidos"
-    db = _client_cache[db_name]
-    coll_names = db.list_collection_names()
-    if "funcionarios" in coll_names:
-        return db["funcionarios"]
-    if "Funcionarios" in coll_names:
-        return db["Funcionarios"]
-    return db["funcionarios"]
+    return funcionarios_collections
 
 
 @logon.route("/logon", methods=["POST"])
@@ -76,7 +25,6 @@ def logon_action():
     senha = request.form.get("senha", "")
 
     # debug via logger (mais seguro que prints). Remova/abaixe nível em produção.
-    current_app.logger.debug("Login attempt matricula=%r senha_len=%d", matricula, len(senha))
 
     if not (matricula and senha):
         flash("Login Inválido!", "danger")
@@ -104,8 +52,6 @@ def logon_action():
     stored = funcionario.get("senha", "")
     # calcular sha256 da senha fornecida
     senha_sha = sha256(senha.encode("utf-8")).hexdigest()
-    current_app.logger.debug("stored senha repr: %r", stored)
-    current_app.logger.debug("computed sha256: %s", senha_sha)
 
     password_ok = False
 
